@@ -12,7 +12,7 @@
         />
 
         <q-toolbar-title>
-          Quasar App
+          BUPT大酒店
         </q-toolbar-title>
 
         <div>Quasar v{{ $q.version }}</div>
@@ -28,14 +28,53 @@
         <q-item-label
           header
         >
-          Essential Links
+          功能列表
         </q-item-label>
 
-        <EssentialLink
-          v-for="link in linksList"
-          :key="link.title"
-          v-bind="link"
-        />
+        <q-item clickable v-ripple to="/home">
+          <q-item-section avatar>
+            <q-icon name="home" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>回到首页</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item clickable v-ripple to="/control">
+          <q-item-section avatar>
+            <q-icon name="person" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>控制面板</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item clickable v-ripple to="/check-in">
+          <q-item-section avatar>
+            <q-icon name="hotel" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>入住界面</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item clickable v-ripple to="/check-out">
+          <q-item-section avatar>
+            <q-icon name="money" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>结账界面</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item clickable v-ripple to="/monitoring">
+          <q-item-section avatar>
+            <q-icon name="remove_red_eye" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label>监控界面</q-item-label>
+          </q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 
@@ -47,56 +86,10 @@
 
 <script setup>
 import { ref } from 'vue'
-import EssentialLink from 'components/EssentialLink.vue'
 
 defineOptions({
   name: 'MainLayout'
 })
-
-const linksList = [
-  {
-    title: 'Docs',
-    caption: 'quasar.dev',
-    icon: 'school',
-    link: 'https://quasar.dev'
-  },
-  {
-    title: 'Github',
-    caption: 'github.com/quasarframework',
-    icon: 'code',
-    link: 'https://github.com/quasarframework'
-  },
-  {
-    title: 'Discord Chat Channel',
-    caption: 'chat.quasar.dev',
-    icon: 'chat',
-    link: 'https://chat.quasar.dev'
-  },
-  {
-    title: 'Forum',
-    caption: 'forum.quasar.dev',
-    icon: 'record_voice_over',
-    link: 'https://forum.quasar.dev'
-  },
-  {
-    title: 'Twitter',
-    caption: '@quasarframework',
-    icon: 'rss_feed',
-    link: 'https://twitter.quasar.dev'
-  },
-  {
-    title: 'Facebook',
-    caption: '@QuasarFramework',
-    icon: 'public',
-    link: 'https://facebook.quasar.dev'
-  },
-  {
-    title: 'Quasar Awesome',
-    caption: 'Community Quasar projects',
-    icon: 'favorite',
-    link: 'https://awesome.quasar.dev'
-  }
-]
 
 const leftDrawerOpen = ref(false)
 
