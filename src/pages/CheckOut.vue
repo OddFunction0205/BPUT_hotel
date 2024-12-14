@@ -1,30 +1,49 @@
 <template>
   <q-page class="container">
     <h2 class="q-mb-md"><q-icon name="money" /> 结账</h2>
-    
-    <!-- 房间号输入框 -->
-    <q-input filled v-model="roomNumber" label="房间号：" />
-    <q-btn label="查询房间" icon="search" @click="queryRoom" class="q-mb-md" />
+
+    <!-- 下载账单部分 -->
+    <div class="download-section q-mb-md">
+      <!-- 输入框（下载账单） -->
+      <div class="q-mb-md flex-center">
+        <q-input filled v-model="billRoomId" label="请输入房间号以下载账单：" type="number" class="q-w-sm" />
+        <q-btn label="下载账单" icon="download" @click="downloadBill" color="primary" class="q-mt-sm q-w-sm" />
+      </div>
+
+      <!-- 输入框（下载详单） -->
+      <div class="q-mb-md flex-center">
+        <q-input filled v-model="detailRoomId" label="请输入房间号以下载详单：" type="number" class="q-w-sm q-mt-md" />
+        <q-btn label="下载详单" icon="download" @click="downloadDetails" color="primary" class="q-mt-sm q-w-sm" />
+      </div>
+    </div>
+
     <q-separator class="q-mt-md q-mb-md" />
 
-    <!-- 账单表格 -->
-    <q-table
-      v-if="showBill"
-      :rows="billItems"
-      :columns="columns"
-      binary-state-sort
-      flat
-      class="q-mt-md"
-    >
-      <template v-slot:body="props">
-        <q-tr :props="props">
-          <q-td key="item" :props="props">
-            <q-icon :name="props.row.icon" /> {{ props.row.item }}
-          </q-td>
-          <q-td key="cost" :props="props">{{ props.row.cost }}</q-td>
-        </q-tr>
-      </template>
-    </q-table>
+    <!-- 房间号查询部分 -->
+    <div class="flex-center">
+      <q-input filled v-model="roomNumber" label="房间号：" type="number" class="q-w-sm" />
+      <q-btn label="查询房间" icon="search" @click="queryRoom" class="q-mt-sm q-w-sm" />
+    </div>
+
+    <q-separator class="q-mt-md q-mb-md" />
+
+    <!-- 账单显示部分 -->
+    <div v-if="showBill" class="bill-section q-pa-md">
+      <h3>账单</h3>
+      <q-table :rows="billItems" :columns="columns" flat class="q-mt-md">
+        <template v-slot:body="props">
+          <q-tr :props="props">
+            <q-td key="item" :props="props">
+              {{ props.row.item }}
+            </q-td>
+            <q-td key="cost" :props="props">
+              <span v-if="props.row.item.includes('费')">{{ props.row.cost }}</span>
+              <span v-else>{{ props.row.cost }}</span>
+            </q-td>
+          </q-tr>
+        </template>
+      </q-table>
+    </div>
 
     <!-- 支付按钮 -->
     <q-btn label="立即支付" icon="payment" color="negative" @click="pay" class="full-width" v-if="showBill" />
@@ -33,36 +52,30 @@
 
 <script>
 import CheckOut from '../models/Checkout';  // 引入 CheckOut 类
+import DownloadBill from '../models/download_bill';  // 引入 DownloadBill 类
+import DownloadDetail from '../models/download_detail';  // 引入 DownloadDetail 类
 
 export default {
   name: 'CheckOut',
   data() {
     return {
-      showBill: false,  // 是否显示账单
-      roomNumber: '',   // 房间号
-      billItems: [],    // 账单项目
-      columns: [        // 表格列定义
-        {
-          name: 'item',
-          required: true,
-          label: '项目',
-          align: 'left',
-          field: 'item',
-          icon: 'description'  // 设置默认图标
-        },
-        {
-          name: 'cost',
-          align: 'left',
-          label: '费用',
-          field: 'cost',
-        },
+      roomNumber: '',        // 房间号（查询用）
+      billRoomId: '',        // 房间号（下载账单用）
+      detailRoomId: '',      // 房间号（下载详单用）
+      showBill: false,       // 是否显示账单
+      billItems: [],         // 账单项目（总费用）
+      columns: [
+        { name: 'item', required: true, label: '项目', align: 'left', field: 'item' },
+        { name: 'cost', label: '费用', align: 'left', field: 'cost' },
       ],
-      checkOutInstance: new CheckOut(),  // 创建 CheckOut 类的实例
+      checkoutInstance: new CheckOut(),  // 新建 CheckOut 实例
+      downloadBillAPI: new DownloadBill(),  // 新建 DownloadBill 实例
+      downloadDetailAPI: new DownloadDetail(),  // 新建 DownloadDetail 实例
     };
   },
   methods: {
     // 查询房间信息并生成账单
-    queryRoom() {
+    async queryRoom() {
       if (!this.roomNumber) {
         this.$q.notify({
           color: 'negative',
@@ -73,88 +86,118 @@ export default {
         return;
       }
 
-      // 模拟根据房间号查询入住信息和空调使用情况
-      this.generateBill();
-    },
-
-    // 生成账单
-    generateBill() {
-      const stayDuration = this.calculateStayDuration(); // 计算入住天数
-      const airConUsage = this.calculateAirConUsage(); // 计算空调使用次数
-
-      // 根据模拟数据生成账单
-      this.billItems = [
-        { item: '房费', cost: `￥${stayDuration * 100}元`, icon: 'money' },
-        { item: '空调使用费', cost: `￥${airConUsage * 20}元`, icon: 'ac_unit' },
-        { item: '总计', cost: `￥${(stayDuration * 100) + (airConUsage * 20)}元`, icon: 'total' },
-      ];
-
-      this.showBill = true; // 显示账单
-    },
-
-    // 模拟计算入住天数
-    calculateStayDuration() {
-      // 实际应从后端获取，这里假设入住了3天
-      return 3;
-    },
-
-    // 模拟计算空调使用次数
-    calculateAirConUsage() {
-      // 实际应从后端获取，这里假设使用了5次空调
-      return 5;
-    },
-
-    // 退房方法
-    async pay() {
-      if (!this.roomNumber) {
+      const roomIdInt = parseInt(this.roomNumber, 10);
+      if (isNaN(roomIdInt)) {
         this.$q.notify({
           color: 'negative',
           position: 'top',
-          message: '请输入房间号',
+          message: '请输入有效的房间号',
           icon: 'warning',
         });
         return;
       }
 
-      // 设置退房信息
-      this.checkOutInstance.setCheckOutInfo(this.roomNumber);
+      await this.fetchBill(roomIdInt);
+    },
 
-      // 调用 CheckOut 类的 checkout 方法
+    async fetchBill(roomId) {
       try {
-        await this.checkOutInstance.checkout('/api/checkout');
-        this.$q.notify({
-          color: 'positive',
-          position: 'top',
-          message: '退房成功！',
-          icon: 'check',
-        });
-        this.showBill = false; // 支付完成后隐藏账单
+        this.checkoutInstance.setCheckOutInfo(roomId);
+        await this.checkoutInstance.checkout('/api/checkout');
+
+        const { checkInTime, checkOutTime, cost, airConFare, clientID, clientName, msg } = this.checkoutInstance;
+
+        if (msg === '退房成功') {
+          this.billItems = [
+            { item: '用户姓名', cost: clientName },
+            { item: '身份证号', cost: clientID },
+            { item: '房费', cost: `￥${cost}元` },
+            { item: '空调使用费', cost: `￥${airConFare}元` },
+            { item: '入住时间', cost: checkInTime },
+            { item: '离开时间', cost: checkOutTime },
+            { item: '总计', cost: `￥${cost + airConFare}元` },
+          ];
+          this.showBill = true;
+        } else {
+          this.$q.notify({
+            color: 'negative',
+            position: 'top',
+            message: `错误: ${msg}`,
+            icon: 'error',
+          });
+        }
       } catch (error) {
+        console.error('获取账单失败：', error);
         this.$q.notify({
           color: 'negative',
           position: 'top',
-          message: '退房操作失败，请稍后再试',
+          message: '获取账单失败，请稍后再试',
           icon: 'error',
         });
       }
+    },
+
+    // 下载账单
+    async downloadBill() {
+      if (!this.billRoomId) {
+        this.$q.notify({
+          color: 'negative',
+          position: 'top',
+          message: '请输入房间号以下载账单',
+          icon: 'warning',
+        });
+        return;
+      }
+
+      try {
+        this.downloadBillAPI.setRoomID(this.billRoomId);
+        const billContent = await this.downloadBillAPI.downloadBill('api/print-bill');
+        this.downloadPDF(billContent, '账单.pdf');
+      } catch (error) {
+        console.error('下载账单失败:', error);
+      }
+    },
+
+    // 下载详单
+    async downloadDetails() {
+      if (!this.detailRoomId) {
+        this.$q.notify({
+          color: 'negative',
+          position: 'top',
+          message: '请输入房间号以下载详单',
+          icon: 'warning',
+        });
+        return;
+      }
+
+      try {
+        this.downloadDetailAPI.setRoomID(this.detailRoomId);
+        const detailsContent = await this.downloadDetailAPI.downloadDetail('api/print-detail');
+        this.downloadPDF(detailsContent, '详单.pdf');
+      } catch (error) {
+        console.error('下载详单失败:', error);
+      }
+    },
+
+    // 下载 PDF 文件
+    downloadPDF(blob, filename) {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
     }
-  }
+  },
 };
 </script>
 
 <style scoped>
-.container {
-  max-width: 600px;
-  margin: 50px auto;
-  padding: 20px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+.q-w-sm {
+  max-width: 300px;
+  width: 100%;
 }
-body {
-  font-family: 'KaiTi', '楷体', Arial, sans-serif; /* 调整字体为楷体 */
-  background-color: #f4f4f4;
-  margin: 0;
-  padding: 20px;
+.flex-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 </style>

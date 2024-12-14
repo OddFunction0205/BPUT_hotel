@@ -7,7 +7,7 @@
     </div>
 
     <!-- 表格部分 -->
-    <table v-if="reportData.length > 0" class="data-table">
+    <table class="data-table" v-show="reportData.length > 0">
       <thead>
         <tr>
           <th>房间号</th>
@@ -21,7 +21,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in reportData" :key="row.room">
+        <tr v-for="(row, index) in reportData" :key="index">
           <td>{{ row.room }}</td>
           <td>{{ row.switchCount }}</td>
           <td>{{ row.dispatchCount }}</td>
@@ -35,17 +35,16 @@
     </table>
 
     <!-- 报表图表部分 -->
-    <div v-if="reportData.length > 0" class="chart-container">
+    <div v-show="reportData.length > 0" class="chart-container">
       <button @click="viewChart('line')">折线图</button>
       <button @click="viewChart('pie')">饼图</button>
-      <!-- 使用 canvas 元素 -->
-      <canvas ref="chartContainer" class="chart"></canvas>
+      <div ref="chartContainer" class="chart"></div>
     </div>
   </div>
 </template>
 
 <script>
-import { Chart } from 'chart.js'; // 引入 Chart.js
+import * as echarts from 'echarts';  // 引入 ECharts
 import AirConReport from '../models/Monitor';  // 引入 AirConReport 类
 
 export default {
@@ -54,16 +53,6 @@ export default {
     return {
       reportPeriod: 'daily', // 默认为日报
       reportData: [], // 存储报表数据
-      columns: [
-        { name: 'room', label: '房间号', field: 'room' },
-        { name: 'switchCount', label: '开关次数', field: 'switchCount' },
-        { name: 'dispatchCount', label: '调度次数', field: 'dispatchCount' },
-        { name: 'detailCount', label: '详单条数', field: 'detailCount' },
-        { name: 'temperatureChangeCount', label: '调温次数', field: 'temperatureChangeCount' },
-        { name: 'fanSpeedChangeCount', label: '调风次数', field: 'fanSpeedChangeCount' },
-        { name: 'duration', label: '请求时长', field: 'duration' },
-        { name: 'totalCost', label: '总费用', field: 'totalCost' },
-      ],
       airConReportInstance: new AirConReport(), // 创建 AirConReport 类的实例
     };
   },
@@ -78,11 +67,14 @@ export default {
     async fetchReportData() {
       this.airConReportInstance.setPeriod(this.reportPeriod);  // 设置报表周期
       try {
-        await this.airConReportInstance.getAirConReport('/api/aircon/report');
-        // 假设后端返回的数据显示在 console 里
-        // 请根据返回的数据格式更新 reportData
-        const data = this.airConReportInstance.data || []; // 假设数据存储在 this.airConReportInstance.data 中
-        this.reportData = data; // 更新报表数据
+        // 获取报表数据
+        const data = await this.airConReportInstance.getAirConReport('api/aircon/report');
+        
+        // 更新报表数据
+        this.reportData = data; 
+        
+        // 默认显示折线图
+        this.viewChart('line'); 
       } catch (error) {
         console.error("报表数据获取失败:", error);
       }
@@ -90,45 +82,64 @@ export default {
 
     // 查看图表
     viewChart(type = 'line') {
-      const ctx = this.$refs.chartContainer.getContext('2d');
+      const chartContainer = this.$refs.chartContainer;
       const data = {
         labels: this.reportData.map(item => item.room), // 房间号作为x轴标签
         datasets: [
           {
             label: '总费用',
-            data: this.reportData.map(item => item.totalCost), // 总费用作为y轴数据
-            borderColor: '#ff6384',
-            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            fill: false,
+            data: this.reportData.map(item => parseFloat(item.totalCost)), // 总费用作为y轴数据
           },
         ],
       };
 
-      // 清除之前的图表
-      if (this.chartInstance) {
-        this.chartInstance.destroy();
+      let option = {};
+      if (type === 'line') {
+        // 折线图
+        option = {
+          xAxis: {
+            type: 'category',
+            data: data.labels,
+          },
+          yAxis: {
+            type: 'value',
+          },
+          series: [{
+            data: data.datasets[0].data,
+            type: 'line',
+            smooth: true,
+            lineStyle: { color: '#ff6384' },
+          }],
+        };
+      } else if (type === 'pie') {
+        // 饼图
+        option = {
+          series: [{
+            name: '总费用',
+            type: 'pie',
+            data: data.labels.map((label, index) => ({
+              name: label,
+              value: data.datasets[0].data[index],
+            })),
+            emphasis: {
+              itemStyle: {
+                shadowBlur: 10,
+                shadowOffsetX: 0,
+                shadowColor: 'rgba(0, 0, 0, 0.5)',
+              },
+            },
+          }],
+        };
       }
 
-      // 根据类型展示图表
-      if (type === 'line') {
-        this.chartInstance = new Chart(ctx, {
-          type: 'line',
-          data: data,
-        });
-      } else if (type === 'pie') {
-        this.chartInstance = new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: this.reportData.map(item => item.room),
-            datasets: [
-              {
-                data: this.reportData.map(item => item.totalCost),
-                backgroundColor: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0'],
-              },
-            ],
-          },
-        });
-      }
+      // 初始化 ECharts 实例
+      const myChart = echarts.init(chartContainer);
+      myChart.setOption(option); // 设置图表选项
+
+      // 确保图表在窗口大小变化时自动适应
+      window.addEventListener('resize', () => {
+        myChart.resize();
+      });
     },
   },
   mounted() {
@@ -139,7 +150,7 @@ export default {
 
 <style scoped>
 .container {
-  max-width: 800px;
+  max-width: 100%; /* 容器宽度设置为 100% 或全屏 */
   margin: 50px auto;
   padding: 20px;
   background-color: #fff;
@@ -185,10 +196,15 @@ table th, table td {
 
 .chart-container {
   text-align: center;
+  width: 100%; /* 容器宽度为100% */
+  max-width: 100%; /* 最大宽度为100% */
+  margin: 0 auto; /* 居中容器 */
+  margin-top: 30px;
 }
 
 .chart {
-  max-width: 600px;
-  margin: 0 auto;
+  width: 100%; /* 宽度100%，占满容器 */
+  height: 400px; /* 固定高度，避免过小 */
 }
+
 </style>

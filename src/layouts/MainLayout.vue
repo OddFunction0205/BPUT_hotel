@@ -40,15 +40,6 @@
           </q-item-section>
         </q-item>
 
-        <q-item clickable v-ripple to="/control">
-          <q-item-section avatar>
-            <q-icon name="person" />
-          </q-item-section>
-          <q-item-section>
-            <q-item-label>控制面板</q-item-label>
-          </q-item-section>
-        </q-item>
-
         <q-item clickable v-ripple to="/check-in">
           <q-item-section avatar>
             <q-icon name="hotel" />

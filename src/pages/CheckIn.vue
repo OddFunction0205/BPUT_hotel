@@ -50,7 +50,7 @@ export default {
       step: 'info',
       name: '',
       id: '',
-      deposit: '',
+      deposit: '',  // 押金字段
       room: '',
       wifiPassword: '',
       dialog: false,
@@ -70,7 +70,7 @@ export default {
       this.checkInDetails = {
         name: this.name,
         id: this.id,
-        deposit: this.deposit,
+        deposit: this.deposit, // 把押金信息保存到 checkInDetails 中
         room: this.room,
         wifiPassword: this.wifiPassword
       };
@@ -78,8 +78,8 @@ export default {
       // 显示确认对话框
       this.dialog = true;
 
-      // 设置入住信息
-      this.checkInInstance.setCheckInInfo(this.room, this.id, this.name);
+      // 设置入住信息（包括押金）
+      this.checkInInstance.setCheckInInfo(Number(this.room), this.id, this.name, Number(this.deposit));  // 确保 deposit 是整数类型
 
       // 调用 checkIn 类的方法进行入住操作
       await this.checkInAPI();
@@ -91,7 +91,7 @@ export default {
     // 调用 CheckIn 类的 checkIn 方法
     async checkInAPI() {
       try {
-        await this.checkInInstance.checkIn('/api/checkin');
+        await this.checkInInstance.checkIn('api/checkin');
         // 如果入住成功，显示成功通知
         this.$q.notify({
           type: 'positive',

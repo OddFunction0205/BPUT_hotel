@@ -25,16 +25,28 @@ export default class AirConReport {
         console.log('空调报表数据获取成功:', data);
         
         // 处理返回的数据
-        if (data && data.data) {
-          console.log('报表数据:', data.data);
+        if (data && Array.isArray(data.data)) {
+          return data.data.map(item => ({
+            room: item.room,  // 房间号
+            switchCount: item.switchCount,  // 开关次数
+            dispatchCount: item.dispatchCount,  // 调度次数
+            detailCount: item.detailCount,  // 详单条数
+            temperatureChangeCount: item.temperatureChangeCount,  // 调温次数
+            fanSpeedChangeCount: item.fanSpeedChangeCount,  // 调风次数
+            duration: item.duration,  // 请求时长
+            totalCost: item.totalCost,  // 总费用
+          }));
         } else {
-          console.error('空调报表数据为空');
+          console.error('空调报表数据为空或格式不正确');
+          return [];
         }
       } else {
         console.error('请求失败:', response.statusText);
+        return [];
       }
     } catch (error) {
       console.error('请求发生错误:', error);
+      return [];
     }
   }
 
